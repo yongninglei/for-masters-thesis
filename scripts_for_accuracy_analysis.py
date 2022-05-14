@@ -160,10 +160,33 @@ outputsubj1
 # same for PW, and FF
 #looping for all files, how to make the code better that can be more automatic?
 
-#I want to use python oop to do this, so I can call do this
-# dataframe.get_acc
-# dataframse.get_RT
-# and soon 
-# maybe set a class, called Behavirour_Ana
-# Behavirour_Ana.RW return RW_split
-# Behavirour_Ana.RW.get_RT
+
+
+class Bwhavirour_Ana():
+    #I want to use python oop to do this, so I can call do this
+    # dataframe.get_acc ---- to get the accuracy for one certain file
+    # dataframse.get_RT
+    # and so on 
+    # maybe set a class, called Behavirour_Ana
+    # Behavirour_Ana.RW return RW_split
+    # Behavirour_Ana.RW.get_RT
+    
+    #first step function, I want the class can help me seperate the dataframe in
+    # to different stimuli sub split
+    
+    RW= 0 #get the dataframe of the RW split 
+    PW= 0 #get the dataframe of the PW split 
+    FF= 0 #get the dataframe of the FF split 
+
+    # second, I want the class help me achieve B_a.RW.get_acc()
+    
+    get_acc= 0 #get the accuracy percent
+    get_RT_overall=0 # get the overall reaction time avg
+    get_RT_correct=0 # get the correct reaction time avg
+    get_RT_incorrect=0 # get the incorrect reaction time avg
+    get_RT_sd=0 ## get the overall reaction time std
+    
+    # other side function, I want the class can be used to store some key data 
+    # for check the result are correct or not
+    
+    def __init__(self):
