@@ -8,7 +8,12 @@ Created on Thu May 19 04:10:11 2022
 import pandas as pd
 import numpy as np
 import glob
+from unidecode import unidecode
 
+wordfile='pyramidsandtrees.txt'
+word=pd.read_csv(wordfile, sep='\t')
+
+word.loc[:,'CUE']=word.loc[:,'CUE'].apply(unidecode)
 '''
 creating the large DF contains all the information
 
@@ -43,6 +48,9 @@ data=tot_df.copy()
 
 result=data.loc[:,('Subject','Trial','Event Type','Code','TTime','SubID','SesID','Run')].copy()
 result['Trial']=result['Trial'].shift(-1)
+result.insert(loc=4, column='CUE',value='nan')
+wordinfo_row_loc=result['Code'].str.len()>8
+result.loc[wordinfo_row_loc,'CUE']=result.loc[wordinfo_row_loc,'Code'].str.split('_').str[4] 
 
 '''
 now, groupby the total DF with SubID, SesID and Run
@@ -62,22 +70,24 @@ result_df=ID_df.copy
 #group by the big DF into different run and make it callable
 run_grp=result.groupby(['SubID','SesID','Run'])
 
+
 # before looping, get all the function that needed for the data analysis
 # first we need acuracy calculator
 
-def get_stimuli(df, stimuli):
+def get_stimuli_trial(df, stimuli):
     return df.loc[df['Code']==stimuli,:].Trial #return the trial # of the selected word type: RW PW or FF
 
-def group_trial(df):
+def grp_by_trial(df):
     return df.groupby(df.Trial) # return the grouped by trial 
 
-def stimuli_type_split(stimuli_Trial_num_df, trial_gp):
+def get_stimuli_split(stimuli_Trial_info, trial_grp_by):
     frames=[]
-    for item in stimuli_Trial_num_df:
-        grp=trial_gp.get_group(item)
+    for item in stimuli_Trial_info:
+        grp=trial_grp_by.get_group(item)
         frames.append(grp)
     return pd.concat(frames) # return the df that contains all the trial that are testing the given word type
 
+'''
 RW_split
 
 working_run.loc[working_run['Code'].isin(['52','51']) ,'Code'].value_counts(0,sort=True)
@@ -88,7 +98,7 @@ action_count= working_run.loc[working_run['Code'].isin(['52','51']) ,'Code'].val
 accuracy= working_run.loc[working_run['Code'].isin(['52','51']) ,'Code'].value_counts()
 action_df=pd.DataFrame()
 action_df['Count']=action_count
-
+'''
 
 def left_count(stimuli_split):
     return stimuli_split.loc[stimuli_split['Code'].isin(['51']) ,'Code'].value_counts()
@@ -124,68 +134,81 @@ def RT_calc(stimuli_type_df):
 """
 accuracy analysis, get the correct answer from wordfile
 
+
+prepare the new column for checking, store the correct answer in somecolumn and then compare them 
 """
 
-from unidecode import unidecode
 
-wordfile='pyramidsandtrees.txt'
-word=pd.read_csv(wordfile, sep='\t')
-
-word.loc[:,'CUE']=word.loc[:,'CUE'].apply(unidecode)
-
-#get all the RW from datafile
-
-#data['Trial']=data['Trial'].shift(-1) # this shift -2 is manipulated, 
-
-'''''
-prepare the new column for checking, store the correct answer in somecolumn and then compare them 
-'''
-
-result.insert(loc=4, column='CUE',value='nan')
 #data.Word=np.nan
 
 #data.rename(columns={"Word":"CUE"},inplace=True)
 
-
-wordinfo_row_loc=result['Code'].str.len()>8
-
-result.loc[wordinfo_row_loc,'CUE']=result.loc[wordinfo_row_loc,'Code'].str.split('_').str[4] #
+#
 # they provide a website to show the difference of .loc and ['column'] 
-
-
-
 
 #word['CUE'].isin(['plato']).value_counts()
 
+df_acc_test=pd.merge(working_run, word, how='left', on='CUE')
 
-for words in data.loc[wordinfo_row_loc, 'CUE']:
-    # the control condition
-    if word['CUE'].apply(unidecode).isin([words]).value_counts()[0]==72:
-        print(words)
+RW_trial_info=get_stimuli_trial(df_acc_test,'RW')
+RW_split=get_stimuli_split(RW_trial_info, grp_by_trial(df_acc_test))
+
+#RW_split.Trial.drop_duplicates()==RW_trial_info cant compare, how to ?
+def get_SOL_value(df):
+    return df.loc[df['SOL'].notnull(),'SOL'].apply(lambda x: x+50).values
+def get_response_code(df):
+    return df.loc[df['Event Type'].isin(['Response']),'Code'].values
+
+def check_response(answer,response):
+    if answer == response:
+        return 1
     else:
-        data.loc[data['CUE']==words,'Correct answer']=word.loc[word["CUE"].apply(unidecode)==words,'SOL']
+        return 0
 
-df00=pd.merge(result, word, how='inner', on='CUE')
+x,y=get_SOL_value(single_trial_df),get_response_code(single_trial_df)
+single_trial_df.where(x==y)
 
-df11=pd.merge(result, word, how='outer', on='CUE')
 
-df22=pd.merge(result, word, how='left', on='CUE')
+    
 
+for trials in RW_trial_info:
+    single_trial_df=RW_split.loc[RW_split["Trial"]==trials,:]
+    single_trial_df['Check']=check_response(get_SOL_value(single_trial_df),get_response_code(single_trial_df)) 
+       
+
+check_response(get_SOL_value(single_trial_df),get_response_code(single_trial_df))    
+ 
+
+
+get_response_code(single_trial_df)==get_SOL_value(single_trial_df)
+
+
+get_SOL_value(sgl_trial_df)
+
+get_response_code(sgl_trial_df).values
+
+get_SOL_value(sgl_trial_df).astype('int')
+get_response_code(sgl_trial_df)-50
+
+get_response_code(sgl_trial_df).astype('int')-50 ==get_SOL_value(sgl_trial_df).astype('int')
+
+sgl_trial_df.where()
+
+
+sgl_trial_df.loc[sgl_trial_df["Event Type"]== "Response",'Code' ]
+
+sgl_trial_df.loc[sgl_trial_df["Event Type"]== "Response",'Code' ].astype("int")-50
+sgl_trial_df.loc[sgl_trial_df["Event Type"]== "Response",'Code' ].tostr.apply(lambda x:x-50)
+
+sgl_trial_df.loc[sgl_trial_df['SOL'].notnull(),'SOL'] == sgl_trial_df.loc[sgl_trial_df["Event Type"]== "Response",'Code' ].astype("int")-50
+
+pd.loc
 #df22.iloc[:,(-3,-2,-1)]=data.iloc[:,(-3,-2,-1)] ????? TWO MANY INDEXER, WHEN USING MERGE, IT tells me 
 # that there are no common columns very strange 
 
-df22.insert(loc=2, column="Event Type", value=0)
-
-Event=data.loc[:,"Event Type"]
 
 
-df22["Event Type"]=Event
-
-Event.index.is_unique
-
-aaaa=Event.index.duplicated()
-
-# something need to be checked here
+# something need to be checked here 
 '''
 
 some try that takes me long time, will research them later on
@@ -212,8 +235,6 @@ for words in data['Word'][word_indexer]:
 #looping!
 for items in ID_lst:
     working_run=run_grp.get_group(items)
-    RW_trial=
-    
     row_indexer=result_df['Filename'].isin(working_run['Filename'].drop_duplicates().tolist())
     
     result_df.loc[row_indexer,'RW_Acc_per']=RW_split.get_acc()# inside the variables: left choice count and right choice count 
@@ -230,7 +251,6 @@ for items in ID_lst:
     result_df.loc[row_indexer,'PW_RT_incorrect']=PW_split.get_RT_incorrect()
     result_df.loc[row_indexer,'PW_RT_sd']=PW_split.get_RT_sd()
     result_df.loc[row_indexer,'PW_Acc_per']=PW_split.get_acc()# inside the variables: left choice count and right choice count 
- 
     # RW_split refers to the RW, trial information
     result_df.loc[row_indexer,'FF_RT_overall']=FF_split.get_RT_overall()
     result_df.loc[row_indexer,'FF_RT_correct']=FF_split.get_RT_correct()
