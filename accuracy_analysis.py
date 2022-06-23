@@ -2,40 +2,40 @@
 """
 Created on Thu May 19 04:10:11 2022
 
-@author: alineware
+@author:tiger
 """
 
+
+'''
+the fixed procedure, import the necessay dataframe package
+
+load the reference word txt as well as all the trial logs
+
+'''
 import pandas as pd
 import numpy as np
 import glob
 from unidecode import unidecode
 
+# read the reference txt file, transfer the spanish word into english
 wordfile='pyramidsandtrees.txt'
 word=pd.read_csv(wordfile, sep='\t')
+word.loc[:,'CUE']=word.loc[:,'CUE'].apply(unidecode) #change the spanish alphabet into
+# English
 
-word.loc[:,'CUE']=word.loc[:,'CUE'].apply(unidecode)
-'''
-creating the large DF contains all the information
 
-in the meantime, check with the EXCEL online 
-
-'''
-#load the excel file for checking
+# read the log files in the folder, compare the ID with excel documents online, print the 
+# wrong file name for manual checking
 SEGU = pd.read_csv('https://docs.google.com/spreadsheets/d/1LQnX8nsXr-lZQqOziO8qiiM_I1huGiCNxdUHCY7mybI/export?gid=0&format=csv',engine='python')
 segu = SEGU.loc[SEGU['DO']==1, ['OsirixID', 'MINID','BIDS_sub','BIDS_ses']]
 
-#start to looping around the file, 
-#compare the filename with Excel record, if not same, print the filename for correction
-#else append columns as subID, sesID and Run
-
-files = glob.glob('*.log')
-
-tot_df=pd.DataFrame()
+#looping the log file in the folder
+files = glob.glob('*.log') # the * is with some str processing strategy 
+tot_df=pd.DataFrame()# tot_df is the original df, store it for future reference 
 for file in files:
     df = pd.read_csv(file, header=0, skiprows=3, delimiter="\t")
     df['Filename'] = file
     section_info = segu.loc[segu['OsirixID']==file.split('-')[0],['BIDS_sub','BIDS_ses']]
-
     if section_info.empty:
       print(file)
     else:
@@ -43,14 +43,18 @@ for file in files:
       df['SesID'] = section_info.iloc[0,1]
       df['Run']   = file.split("_")[-1].split(".")[0]
       tot_df=pd.concat([tot_df,df])
-
 data=tot_df.copy()
 
+data.merge()
+
+
+"""
 result=data.loc[:,('Subject','Trial','Event Type','Code','TTime','SubID','SesID','Run')].copy()
 result['Trial']=result['Trial'].shift(-1)
 result.insert(loc=4, column='CUE',value='nan')
 wordinfo_row_loc=result['Code'].str.len()>8
 result.loc[wordinfo_row_loc,'CUE']=result.loc[wordinfo_row_loc,'Code'].str.split('_').str[4] 
+"""
 
 '''
 now, groupby the total DF with SubID, SesID and Run
@@ -165,16 +169,28 @@ def check_response(answer,response):
     else:
         return 0
 
-x,y=get_SOL_value(single_trial_df),get_response_code(single_trial_df)
-single_trial_df.where(x==y)
+single_trial_df.loc[single_trial_df['Event Type'].isin(['Response']),'SOL']=single_trial_df.loc[single_trial_df['SOL'].notnull(),'SOL'].apply(lambda x: x+50)
 
+answer=get_SOL_value(single_trial_df).tolist()
 
+res=get_response_code(single_trial_df).tolist()
+
+single_trial_df['Check']=np.where(single_trial_df['Code']==single_trial_df['SOL'].apply(lambda x: x+50))
     
 
 for trials in RW_trial_info:
     single_trial_df=RW_split.loc[RW_split["Trial"]==trials,:]
-    single_trial_df['Check']=check_response(get_SOL_value(single_trial_df),get_response_code(single_trial_df)) 
+
+    if answer==response:
+        single_trial_df['check']=1
+    else:
+        single_trial_df['check']=0
        
+
+single_trial_df['SOL']=single_trial_df['SOL'].fillna(value=int(get_SOL_value(single_trial_df)))
+
+single_trial_df.where(single_trial_df['Code']==single_trial_df['SOL'],True,False)
+
 
 check_response(get_SOL_value(single_trial_df),get_response_code(single_trial_df))    
  

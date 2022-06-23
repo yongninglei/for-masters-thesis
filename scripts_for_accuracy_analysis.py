@@ -16,13 +16,14 @@ import pandas as pd
 import numpy as np
 import glob
 
-#transfer all the .log doc in the file into .xlsx doc
-files = glob.glob('*.log')
+#no need
+#files = glob.glob('*.log')
 
-for file in files:
-    df = pd.read_csv(file, delimiter=r"\s+", header=None, names=list(range(20)))
-    df.to_excel(file+'.xlsx', index=False)
-    
+#for file in files:
+    #df = pd.read_csv(file, delimiter=r"\s+", header=None, names=list(range(20)))
+    #df.to_excel(file+'.xlsx', index=False)
+ #####################   
+
 
 #demand 0, build an empty dataframe with certain column for futher append
 outputdf=pd.DataFrame(columns=["Subject ID", "Section ID", "Run",'Filename',
@@ -37,60 +38,129 @@ outputdf=pd.DataFrame(columns=["Subject ID", "Section ID", "Run",'Filename',
 
 # testing algorithm for single document
 # data loading
-datafile='S001_DAY1_MINITWICE_4189-vOT_Triads_fMRI_I.log.xlsx'
-data=pd.read_excel(datafile,header=3)
 
-outputsubj1=[]
+datafile='S001_DAY1_MINITWICE_4189-vOT_Triads_fMRI_I.log'
+data2=pd.read_csv(datafile,header=0, skiprows=3, delimiter="\t")
+
+data['Filename']=datafile
+
+test=data.iloc[1,4] # location and index location 
+test2=data.loc[#this place should be the row index, and after the comma, is the column name]
+
+               
+######################
+
+SEGU = pd.read_csv('https://docs.google.com/spreadsheets/d/1LQnX8nsXr-lZQqOziO8qiiM_I1huGiCNxdUHCY7mybI/export?gid=0&format=csv',engine='python')
+segu = SEGU.loc[SEGU['DO']==1, ['OsirixID', 'MINID','BIDS_sub','BIDS_ses']]
+ss=SEGU
+
+files = glob.glob('*.log')
+
+tot_df=pd.DataFrame()
+for file in files:
+    df = pd.read_csv(file, header=0, skiprows=3, delimiter="\t")
+    df['Filename'] = file
+    section_info = segu.loc[segu['OsirixID']==file.split('-')[0],['BIDS_sub','BIDS_ses']]
+
+    if section_info.empty:
+      print(file)
+    else:
+      df['SubID'] = section_info.iloc[0,0]
+      df['SesID'] = section_info.iloc[0,1]
+      df['Run']   = file[-5:-4]
+      tot_df=pd.concat([tot_df,df])
+
+
+
 #data cleanning, delete useless column
-data=data.iloc[0:,0:5]
+data=tot_df
 #data cleanning, delete useless rows 
-data = data.drop(data[data.Event=="Port"].index)
-data = data.drop(data[data.Event=="Pulse"].index) # drop two useless rows, how to implement them in 1 line code?
+#data = data.drop(data[data.Event=="Port"].index)
+#data = data.drop(data[data.Event=="Pulse"].index) # drop two useless rows, how to implement them in 1 line code? 
+'''
+i have question on this drop step, maybe implement it later
+'''
 
 #data split, firstly get the indexer or pointer to all the RW, PW, FF stimuli
 def get_stimuli1(df,stimuli_type):
-    return df[df.Type==stimuli_type]
+    return df[df['Code']==stimuli_type]
 
 get_RW=get_stimuli1(data,"RW")
 get_PW=get_stimuli1(data,"PW")
 get_FF=get_stimuli1(data,"FF")
 
 def get_stimuli2(df,stimuli_type): #the same thing from the previous one, i just found it and implement again
-    type_group=df.groupby(df.Type)
+    type_group=df.groupby(df['Code'])
     return type_group.get_group(stimuli_type)
 
-get_RW2=get_stimuli2(data, "RW")
+#get_RW2=get_stimuli2(data, "RW")
+def get_stimuli3(df, stimuli_type):
+    return df.loc[df['Code']==stimuli_type,:]
 
-
-
+#RW_get=get_stimuli3(data2,'RW')
 # secondly, groupby trial, and then can use getgroup to get all the trial that correspond to RW, PW. FF
 
-tiral_group=data.groupby(data.Trial)
+'''
+this step is to groupby the data into : subject, section, run 
+for subject 1, at day1 section 1
 
-def word_type_spliter(stimulus_trial, trial_group):
+'''
+
+
+ID_df=data.iloc[:,[-3,-2,-1]]
+
+ID_df=ID_df.drop_duplicates()
+
+ID_lst=ID_df.apply(lambda x: tuple(x), axis=1).tolist()
+'''''
+'''
+result_df=ID_df
+
+''''
+hhhhh
+'''
+
+
+run_gb=data.groupby(['SubID','SesID','Run'])
+run_gb.get_group(("S041", "T01", "I"))
+
+def get_run(SubID, SesID, Run):
+    return run_gb.get_group()
+
+	SubID	SesID	Run
+0	S041	T01	I
+
+
+for items in ID_lst:
+    working_run=run_gb.get_group(items)
+    
+
+
+get_trial=data.groupby(data.Trial)
+
+def word_type_split(stimulus_trial, trial_group):
     frames=[]
     for item in stimulus_trial:
         grp=trial_group.get_group(item)
         frames.append(grp)
     return pd.concat(frames)
 
-RW_split=word_type_spliter(get_stimuli1(data,"RW").Trial, tiral_group)
-PW_split=word_type_spliter(get_PW.Trial, tiral_group)
-FF_split=word_type_spliter(get_FF.Trial, tiral_group)
+RW_split=word_type_split(get_stimuli1(data,"RW").Trial, tiral_group)
+PW_split=word_type_split(get_PW.Trial, tiral_group)
+FF_split=word_type_split(get_FF.Trial, tiral_group)
 
 #by now, we have perfectly seperate the who dataframe into valid RW, PW, and FF sub dataframe, next step is for data analysis
 
 # output preparation
 
 # firstly, seperate the id into subject name, run, section......
-def id_sep(datafile):
-    id_lst=datafile.split('_')
-    id_lst+=(id_lst[-1].split('.'))
+#def id_sep(datafile):
+    #id_lst=datafile.split('_')
+    #id_lst+=(id_lst[-1].split('.'))
 # the needed index: 0,-3, 1~-7   
-    return [id_lst[0],id_lst[1:-7],id_lst[-3],datafile]   # out put the key component: Subject name: S001, Section:Day1,run:1
+   # return [id_lst[0],id_lst[1:-7],id_lst[-3],datafile]   # out put the key component: Subject name: S001, Section:Day1,run:1
 
-outputsubj1.append(id_sep(datafile))
-outputsubj1
+
 #secondly, for RW, PW, FF, calculate the acc. RT, seperatly 
 
 def left_count(stimulitype):
