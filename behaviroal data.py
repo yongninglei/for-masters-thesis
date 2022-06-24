@@ -191,9 +191,6 @@ for items in ID_lst:
     result_df.loc[row_ctrl,'Acc_of_PW']=get_acc(PW_sub)
     result_df.loc[row_ctrl,'Acc_of_FF']=get_acc(FF_sub)
 
-result_df['Acc_of_RW'].hist()
-# Try things on the working_run
-working_run.head(5)
 
 
 
