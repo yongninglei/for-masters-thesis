@@ -110,7 +110,7 @@ compare['SOL']=compare['SOL'].shift(1)
 compare['SOL']=compare['SOL'].apply(lambda x:x+50)
 
 compare=compare.dropna()
-compare['Result']=np.where(compare['Code'].astype(float)==compare['SOL'], 1, 0)
+compare['Result']=np.where(compare['Code'].astype(float)==compare['SOL'],'T','F') #the result comparasion is finished here
 
 clean_data=pd.merge(clean_data, compare['Result'], how='left', left_index=True, right_index=True)
 
@@ -144,18 +144,59 @@ ID_df=clean_data.loc[:,['SubID','SesID','Run','Filename']].drop_duplicates()
 ID_lst=ID_df.loc[:,['SubID','SesID','Run']].apply(lambda x: tuple(x), axis=1).tolist() # maybe used the iterows 
 
 result_df=ID_df.copy()
+#GET the RW split, PW split, FF split seperatly 
+#calculate their accurycy by using valuecounts() and choose the larger one 
+def get_trial_number(wordtype, df):
+    return df.loc[df['Code']==wordtype,'Trial']
+
+get_trial_number('RW',working_run)
+
+def trial_grpby(df):
+    return df.groupby(df.Trial) # return the groupby trial 
+
+def get_subdf_for(wordtype, df):
+    frames=[]
+    trial_number=get_trial_number(wordtype,df)
+    trial_grp=trial_grpby(df)
+    for item in trial_number:
+        grp=trial_grp.get_group(item)
+        if grp.shape[0]==3:
+            frames.append(grp)
+    return pd.concat(frames)
+
+RW_sub=get_subdf_for('RW',working_run)
+
+RW_test=RW_sub.loc[:,['Code','Result','SOL']]
+
+acc=RW_sub.Result.value_counts(1)
+acc.loc['T']
+
+def get_acc(word_subdf):
+    return word_subdf.loc[:,'Result'].value_counts(1).loc['T']
+    
+get_acc(RW_sub)
 
 #group by the big DF into different run and make it callable
+
 run_grp=clean_data.groupby(['SubID','SesID','Run'])
+
 for items in ID_lst:
     row_ctrl=result_df.loc[:,['SubID','SesID','Run']].apply(lambda x: tuple(x), axis=1)==items
     working_run=run_grp.get_group(items)
-    result_df.loc[row_ctrl,'Acc_of_RW']=working_run['Result'].value_counts(1,ascending=True)[1] # call [1] is by index, means the correct answer
+    
+    RW_sub=get_subdf_for('RW',working_run)
+    PW_sub=get_subdf_for('PW',working_run)
+    FF_sub=get_subdf_for('FF',working_run)
+    result_df.loc[row_ctrl,'Acc_of_RW']=get_acc(RW_sub)
+    result_df.loc[row_ctrl,'Acc_of_PW']=get_acc(PW_sub)
+    result_df.loc[row_ctrl,'Acc_of_FF']=get_acc(FF_sub)
 
+result_df['Acc_of_RW'].hist()
 # Try things on the working_run
 working_run.head(5)
 
-# count the 1 or 0 in each run
-acc=run_grp.get_group(ID_lst[15])['Result'].value_counts(1,ascending=True)[1]
+
+
+
 
 
