@@ -58,7 +58,7 @@ CUE_og=data2.loc[data2['CUE'].notnull()]
 data2=pd.merge(data, word, how='left', on='CUE')
 # first delete, delete the rows that are not Picture, and Response
 clean_data2=data2.loc[~(data2['Code'].isin(["99","1",'98','endrest','rest']))]
-clean_data2['Trial']=clean_data2['Trial'].shift(-1)
+# clean_data2['Trial']=clean_data2['Trial'].shift(-1)
 clean_data2=clean_data2.reset_index()
 '''
 idx_all=data2.index.tolist()
@@ -175,7 +175,7 @@ def get_acc(wordtype_sub):
             wordtype.loc[row_indexer ,'Result']=1
         else:
             wordtype.loc[row_indexer,'Result']=0
-    return wordtype["Result"].value_counts(1)[1]
+    return wordtype["Result"].value_counts(1)[0]
 
 
     
@@ -210,47 +210,42 @@ for items in ID_lst:
     working_run=run_grp.get_group(items)
     
     RW_sub=get_subdf('RW',working_run)
-    PW_sub=get_subdf('PW',working_run)
-    FF_sub=get_subdf('FF',working_run)
-    
+
+    print(items)
     result_df.loc[row_ctrl,'Acc_of_RW']=get_acc(RW_sub)
-    result_df.loc[row_ctrl,'Acc_of_PW']=get_acc(PW_sub)
-    result_df.loc[row_ctrl,'Acc_of_FF']=get_acc(FF_sub)
+
 
     
     with pd.ExcelWriter(r'C:\Users\alineware\Desktop\Output\ ' + working_run['Filename'].iloc[0] + '.xlsx') as writer:
         RW_sub[0].to_excel(writer, sheet_name='RW_complete_trial')
         RW_sub[1].to_excel(writer, sheet_name='RW_imcomplete_trial')
-        PW_sub[0].to_excel(writer, sheet_name='PW_complete_trial')
-        PW_sub[1].to_excel(writer, sheet_name='PW_imcomplete_trial')
-        FF_sub[0].to_excel(writer, sheet_name='FF_complete_trial')
-        FF_sub[1].to_excel(writer, sheet_name='FF_imcomplete_trial')    
+       
+       
     result_df.loc[row_ctrl,'Acc_of_RW']=get_acc(RW_sub)
-    result_df.loc[row_ctrl,'Acc_of_PW']=get_acc(PW_sub)
-    result_df.loc[row_ctrl,'Acc_of_FF']=get_acc(FF_sub)
+ 
 
-    
-
+problem_run=run_grp.get_group(('S041', 'T01', 'I'))    
 
 
-result_df.to_excel('reslut.xlsx')
 
-complete=[]
-uncomplete=[]
-trial_number=get_trial_number('PW',working_run)
-trial_grp=trial_grpby(working_run)
-for item in trial_number:
-    target_trial=trial_grp.get_group(item)
-    if (target_trial.shape[0]==3) & (target_trial['CUE'].notnull().any()) & (target_trial['Event Type'].isin(['Response']).any()):
-        complete.append(target_trial) 
-    else:
-        uncomplete.append(target_trial)
+# result_df.to_excel('reslut.xlsx')
+
+# complete=[]
+# uncomplete=[]
+# trial_number=get_trial_number('PW',working_run)
+# trial_grp=trial_grpby(working_run)
+# for item in trial_number:
+#     target_trial=trial_grp.get_group(item)
+#     if (target_trial.shape[0]==3) & (target_trial['CUE'].notnull().any()) & (target_trial['Event Type'].isin(['Response']).any()):
+#         complete.append(target_trial) 
+#     else:
+#         uncomplete.append(target_trial)
             
-    com=pd.concat(complete) if len(complete) > 0 else pd.DataFrame(columns=clean_data2.columns)
-    uncom=pd.concat(uncomplete) if len(uncomplete) > 0 else pd.DataFrame(columns=clean_data2.columns)
+#     com=pd.concat(complete) if len(complete) > 0 else pd.DataFrame(columns=clean_data2.columns)
+#     uncom=pd.concat(uncomplete) if len(uncomplete) > 0 else pd.DataFrame(columns=clean_data2.columns)
 
-working_run['Filename'].iloc[0]
+# working_run['Filename'].iloc[0]
 
-with pd.ExcelWriter(r'C:\Users\alineware\Desktop\Output\ ' + working_run['Filename'].iloc[0] + '.xls') as writer:
-    RW_sub[0].to_excel(writer, sheet_name='use')
-    RW_sub[1].to_excel(writer, sheet_name='notuse')
+# with pd.ExcelWriter(r'C:\Users\alineware\Desktop\Output\ ' + working_run['Filename'].iloc[0] + '.xls') as writer:
+#     RW_sub[0].to_excel(writer, sheet_name='use')
+#     RW_sub[1].to_excel(writer, sheet_name='notuse')
