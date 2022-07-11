@@ -216,7 +216,7 @@ for items in ID_lst:
 
 
     
-    with pd.ExcelWriter(r'C:\Users\alineware\Desktop\Output\ ' + working_run['Filename'].iloc[0] + '.xlsx') as writer:
+    with pd.ExcelWriter(r'C:\Users\69580\Desktop\Output\ ' + working_run['Filename'].iloc[0] + '.xlsx') as writer:
         RW_sub[0].to_excel(writer, sheet_name='RW_complete_trial')
         RW_sub[1].to_excel(writer, sheet_name='RW_imcomplete_trial')
        
@@ -224,7 +224,7 @@ for items in ID_lst:
     result_df.loc[row_ctrl,'Acc_of_RW']=get_acc(RW_sub)
  
 
-problem_run=run_grp.get_group(('S041', 'T01', 'I'))    
+#problem_run=run_grp.get_group(('S041', 'T01', 'I'))    
 
 
 
